@@ -1,0 +1,10 @@
+D:\workspace\visual studio\FTPServer\AzureFTPServer_WorkerRole\bin\Release\AzureFTPServer_WorkerRole.dll.config
+D:\workspace\visual studio\FTPServer\AzureFTPServer_WorkerRole\bin\Release\AzureFTPServer_WorkerRole.dll
+D:\workspace\visual studio\FTPServer\AzureFTPServer_WorkerRole\bin\Release\AzureFTPServer_WorkerRole.pdb
+D:\workspace\visual studio\FTPServer\AzureFTPServer_WorkerRole\bin\Release\Microsoft.WindowsAzure.Diagnostics.dll
+D:\workspace\visual studio\FTPServer\AzureFTPServer_WorkerRole\bin\Release\Microsoft.WindowsAzure.StorageClient.dll
+D:\workspace\visual studio\FTPServer\AzureFTPServer_WorkerRole\bin\Release\Microsoft.WindowsAzure.Diagnostics.xml
+D:\workspace\visual studio\FTPServer\AzureFTPServer_WorkerRole\bin\Release\Microsoft.WindowsAzure.StorageClient.xml
+D:\workspace\visual studio\FTPServer\AzureFTPServer_WorkerRole\obj\Release\ResolveAssemblyReference.cache
+D:\workspace\visual studio\FTPServer\AzureFTPServer_WorkerRole\obj\Release\AzureFTPServer_WorkerRole.dll
+D:\workspace\visual studio\FTPServer\AzureFTPServer_WorkerRole\obj\Release\AzureFTPServer_WorkerRole.pdb

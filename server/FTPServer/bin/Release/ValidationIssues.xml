@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ValidationIssue Include="AzureFTPServer_WorkerRole|ServiceConfiguration.Cloud.cscfg|WAT170">
+      <ProjectName>AzureFTPServer_WorkerRole</ProjectName>
+      <FilenameWithExtension>ServiceConfiguration.Cloud.cscfg</FilenameWithExtension>
+      <Code>WAT170</Code>
+      <FileFullPath>bin\Release\ServiceConfiguration.cscfg</FileFullPath>
+      <WATMessage>True</WATMessage>
+      <Arguments>Microsoft.WindowsAzure.Plugins.Diagnostics.ConnectionString;AzureFTPServer_WorkerRole;ServiceConfiguration.Cloud.cscfg</Arguments>
+      <HelpKeyword>WATValidationIssueWarning</HelpKeyword>
+    </ValidationIssue>
+    <ValidationIssue Include="AzureFTPServer_WorkerRole|ServiceConfiguration.Cloud.cscfg|WAT170">
+      <ProjectName>AzureFTPServer_WorkerRole</ProjectName>
+      <FilenameWithExtension>ServiceConfiguration.Cloud.cscfg</FilenameWithExtension>
+      <Code>WAT170</Code>
+      <FileFullPath>bin\Release\ServiceConfiguration.cscfg</FileFullPath>
+      <WATMessage>True</WATMessage>
+      <Arguments>DataConnectionString;AzureFTPServer_WorkerRole;ServiceConfiguration.Cloud.cscfg</Arguments>
+      <HelpKeyword>WATValidationIssueWarning</HelpKeyword>
+    </ValidationIssue>
+  </ItemGroup>
+</Project>

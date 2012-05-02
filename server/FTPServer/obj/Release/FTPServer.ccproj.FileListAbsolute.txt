@@ -1,0 +1,7 @@
+D:\workspace\visual studio\FTPServer\FTPServer\bin\Release\ServiceConfiguration.cscfg
+D:\workspace\visual studio\FTPServer\FTPServer\bin\Release\ValidationIssues.xml
+D:\workspace\visual studio\FTPServer\FTPServer\obj\Release\AzureFTPServer_WorkerRole\AzureFTPServer_WorkerRole.dll
+D:\workspace\visual studio\FTPServer\FTPServer\obj\Release\AzureFTPServer_WorkerRole\AzureFTPServer_WorkerRole.dll.config
+D:\workspace\visual studio\FTPServer\FTPServer\obj\Release\AzureFTPServer_WorkerRole\AzureFTPServer_WorkerRole.pdb
+D:\workspace\visual studio\FTPServer\FTPServer\obj\Release\AzureFTPServer_WorkerRole\Microsoft.WindowsAzure.Diagnostics.dll
+D:\workspace\visual studio\FTPServer\FTPServer\obj\Release\AzureFTPServer_WorkerRole\Microsoft.WindowsAzure.StorageClient.dll
