@@ -7,7 +7,10 @@ using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
-
+using System.Web.Security;
+using Microsoft.WindowsAzure;
+using Microsoft.WindowsAzure.ServiceRuntime;
+using Microsoft.WindowsAzure.StorageClient;
 namespace AzureFTPServer_WorkerRole
 {
     class FTPServerSlave
@@ -143,6 +146,7 @@ namespace AzureFTPServer_WorkerRole
                             /* remember current user path */
                             _currentPath = _filesystem.getRootDirectory() +
                                 _username + _filesystem.getFileSeperator();
+                            _filesystem.mount(_currentPath);
                             /* compose response information */
                             sb.Append(SC_LN_SUC);
                             sb.Append(DELIMITER);
@@ -593,7 +597,27 @@ namespace AzureFTPServer_WorkerRole
         /* TODO */
         private bool authenticate(string username, string password)
         {
-            return true;
+            if (username == null || password == null)
+                return false;
+            Microsoft.WindowsAzure.CloudStorageAccount.
+                    SetConfigurationSettingPublisher(
+                        (configName, configSetter) =>
+                        {
+                            configSetter(RoleEnvironment.
+                                GetConfigurationSettingValue(configName));
+                        }
+                    );
+            var storageAccount =
+                    CloudStorageAccount.FromConfigurationSetting(
+                    "DataConnectionString");
+            var client = storageAccount.CreateCloudBlobClient();
+                /* get root path, create if not exists */
+            var container = client.GetContainerReference("user");
+            var passwdBlob = container.GetBlobReference("user/passwd/" + username);
+            if (password == passwdBlob.DownloadText())
+                return true;
+            else
+                return false;
         }
 
         private string composePassiveResponse(TcpClient client, IPEndPoint port)

@@ -79,6 +79,7 @@ namespace AzureFTPServer_WorkerRole
 
             string[] pathParts = getPathParts(relativePath);
             AzureFileSystemNode cursor = this;
+
             lock (this)
             {
                 try
@@ -92,7 +93,6 @@ namespace AzureFTPServer_WorkerRole
                 {
                     System.Diagnostics.Trace.TraceError(
                         "Node not found {0}. {1}", relativePath, e.Message);
-                    cursor = null;
                 }
                 catch (NullReferenceException e)
                 {
@@ -173,7 +173,7 @@ namespace AzureFTPServer_WorkerRole
             /*
              * build hierachy tree of the file system
              */
-            mount();
+            mount("/");
         }
 
         /* format device */
@@ -209,11 +209,11 @@ namespace AzureFTPServer_WorkerRole
                 _rootPath.CreateIfNotExist();
 
                 
-                CloudBlockBlob blob = _rootPath.GetBlockBlobReference("a/");
-                blob.Properties.ContentType = "application/octet-stream";
-                Stream a = new MemoryStream();
-                blob.UploadFromStream(a);
-                a.Close();
+    //            CloudBlockBlob blob = _rootPath.GetBlockBlobReference("a/");
+    //           blob.Properties.ContentType = "application/octet-stream";
+    //            Stream a = new MemoryStream();
+    //            blob.UploadFromStream(a);
+    //            a.Close();
                 
                 /* create root node */
                 _rootNode = new AzureFileSystemNode(null, AFS_MONT_POINT,
@@ -233,7 +233,7 @@ namespace AzureFTPServer_WorkerRole
         }
 
         /* intitialize file system */
-        public void mount()
+        public void mount(string mountrootpath)
         {
             if (blobContainerExists(_rootPath))
             {
@@ -244,7 +244,8 @@ namespace AzureFTPServer_WorkerRole
                 {
                     string relativePath = item.Uri.AbsolutePath.Substring(
                         basePath.Length);
-                    _rootNode.insert(relativePath);
+                    if( relativePath.StartsWith(mountrootpath))
+                        _rootNode.insert(relativePath);
                 }
             }
         }

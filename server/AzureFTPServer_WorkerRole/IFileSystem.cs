@@ -13,7 +13,7 @@ namespace AzureFTPServer_WorkerRole
         void initialize();
 
         /* mount file system or intialize the file system. */
-        void mount();
+        void mount(string path);
 
         /* list files with specific path */
         IEnumerable<string> dir(string path);
