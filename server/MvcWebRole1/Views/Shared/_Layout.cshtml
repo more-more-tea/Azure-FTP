@@ -20,11 +20,8 @@
                 <ul id="menu">
                     <li>@Html.ActionLink("Home", "Index", "Home")</li>
                     <li>@Html.ActionLink("About", "About", "Home")</li>
-                    @if (Request.IsAuthenticated)
-                    {
-                        <li>@Html.ActionLink("Setup", "Setup", "FTP")</li>
-                        <li>@Html.ActionLink("Del User", "DeleteUser", "FTP")</li>
-                    }
+                    <li>@Html.ActionLink("Setup", "Setup", "FTP")</li>
+                    <li>@Html.ActionLink("Del User", "DeleteUser", "FTP")</li>
                 </ul>
             </nav>
         </header>

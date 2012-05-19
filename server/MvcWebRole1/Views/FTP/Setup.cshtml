@@ -27,11 +27,19 @@
             </div>
 
             <div class="editor-label">
-                @Html.LabelFor(m => m.HomeDirectory)
+                @Html.LabelFor(m => m.Password)
             </div>
             <div class="editor-field">
-                @Html.TextBoxFor(m => m.HomeDirectory)
-                @Html.ValidationMessageFor(m => m.HomeDirectory)
+                @Html.PasswordFor(m => m.Password)
+                @Html.ValidationMessageFor(m => m.Password)
+            </div>
+
+            <div class="editor-label">
+                @Html.LabelFor(m => m.Container)
+            </div>
+            <div class="editor-field">
+                @Html.TextBoxFor(m => m.Container)
+                @Html.ValidationMessageFor(m => m.Container)
             </div>
 
             <p>

@@ -23,11 +23,11 @@ namespace AzureFTPServer_WorkerRole
 
         public FTPServerSlave(FTPServer server,
             Dictionary<string, string> accounts,
-            IFileSystem filesystem, TcpClient connection)
+            TcpClient connection)
         {
             this._server = server;
             this._accounts = accounts;
-            this._filesystem = filesystem;
+            this._filesystem = null;
             this._connection = connection;
             
             /* default active end point */
@@ -144,9 +144,17 @@ namespace AzureFTPServer_WorkerRole
                         if (_authenticated)
                         {
                             /* remember current user path */
-                            _currentPath = _filesystem.getRootDirectory() +
-                                _username + _filesystem.getFileSeperator();
-                            _filesystem.mount(_currentPath);
+                            if (_server.fsDict.ContainsKey(_username))
+                                _filesystem = _server.fsDict[_username];
+                            else
+                            {
+                                _filesystem = new AzureFileSystem();
+                                _filesystem.initialize(_username);
+                                _filesystem.mount("/");
+                                _server.fsDict[_username] = _filesystem;
+                            }
+                            _currentPath = "/";
+                            
                             /* compose response information */
                             sb.Append(SC_LN_SUC);
                             sb.Append(DELIMITER);
@@ -166,22 +174,13 @@ namespace AzureFTPServer_WorkerRole
                     case Verb.CWD:
                         {
                             string directoryChanged = null;
-                            if (parameter == "..")
-                            {
-                                directoryChanged = gotoParent(_currentPath);
-                            }
-                            else if (parameter == null || parameter == "" ||
-                                parameter == ".")
-                            {
-                                directoryChanged = _currentPath;
-                            }
-                            else
-                            {
-                                parameter = getAbsolutePath(parameter);
-                                directoryChanged =
-                                    changeDirectory(parameter);
-                                System.Diagnostics.Trace.TraceInformation("directory changed to {0}.", _currentPath);
-                            }
+                            if (parameter == null || parameter == "")
+                                parameter = ".";
+
+                             parameter = getAbsolutePath(parameter);
+                             directoryChanged = changeDirectory(parameter+_filesystem.getFileSeperator());
+                             System.Diagnostics.Trace.TraceInformation("directory changed for {0} to {1}.", _currentPath, directoryChanged);
+                          
 
                             if (directoryChanged != null)
                             {
@@ -206,7 +205,7 @@ namespace AzureFTPServer_WorkerRole
 
                         break;
                     case Verb.CDUP:
-                        _currentPath = gotoParent(_currentPath);
+                        _currentPath = changeDirectory(_currentPath+"../");
 
                         sb.Append(SC_DIR_CHG_OK);
                         sb.Append(DELIMITER);
@@ -287,7 +286,7 @@ namespace AzureFTPServer_WorkerRole
                             {
                                 parameter = _currentPath;
                             }
-                            string dirPath = getAbsolutePath(parameter);
+                            string dirPath = getAbsolutePath(parameter)+_filesystem.getFileSeperator();
                             IEnumerable<string> files = null;
                             try
                             {
@@ -373,7 +372,7 @@ namespace AzureFTPServer_WorkerRole
                         {
                             /* STOR will overwrite existing file */
                             string absPath = getAbsolutePath(parameter);
-                            System.Diagnostics.Trace.TraceInformation("a {0}, b {1}.", parameter, absPath);
+                            System.Diagnostics.Trace.TraceInformation("a {0}, b {1},  c{2}", parameter, absPath, _currentPath);
 
                             _transferMode = TransferMode.BINARY;
                             sb.Append(SC_FS_PRE);
@@ -426,7 +425,7 @@ namespace AzureFTPServer_WorkerRole
                     case Verb.MKD:
                         {
                             string absPath = getAbsolutePath(parameter);
-                            bool dirCreated = _filesystem.mkdir(absPath);
+                            bool dirCreated = _filesystem.mkdir(absPath+_filesystem.getFileSeperator());
 
                             if (dirCreated)
                             {
@@ -446,12 +445,8 @@ namespace AzureFTPServer_WorkerRole
                     case Verb.RMD:
                         {
                             string absPath = getAbsolutePath(parameter);
-                            if (absPath[parameter.Length - 1] !=
-                                _filesystem.getFileSeperator())
-                            {
-                                absPath = absPath + _filesystem.getFileSeperator();
-                            }
-                            bool dirRemoved = _filesystem.rmdir(absPath);
+                
+                            bool dirRemoved = _filesystem.rmdir(absPath+_filesystem.getFileSeperator());
 
                             if (dirRemoved)
                             {
@@ -590,7 +585,10 @@ namespace AzureFTPServer_WorkerRole
             {
                 absPath = _currentPath + path;
             }
-
+            // only root is special
+            while (absPath.Length > 0 && absPath[absPath.Length - 1] == '/')
+                absPath = absPath.Substring(0, absPath.Length - 1);
+            
             return absPath;
         }
 
@@ -676,19 +674,9 @@ namespace AzureFTPServer_WorkerRole
 
         private string changeDirectory(string path)
         {
-            if (path[path.Length - 1] != _filesystem.getFileSeperator())
-                path = path + _filesystem.getFileSeperator();
-
-            try
-            {
-                _filesystem.get(path, null);
-                return path;
-            }
-            catch (FileNotFoundException)
-            {
-            }
-
-            return null;
+         
+              return _filesystem.find(path);
+             
         }
 
         private static void buildVerbDictionary()

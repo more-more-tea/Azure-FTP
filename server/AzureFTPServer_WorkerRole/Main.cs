@@ -45,10 +45,10 @@ namespace AzureFTPServer_WorkerRole
             // For information on handling configuration changes
             // see the MSDN topic at http://go.microsoft.com/fwlink/?LinkId=166357.
 
-            _filesystem = new AzureFileSystem();
+  
             IPEndPoint port =
                 RoleEnvironment.CurrentRoleInstance.InstanceEndpoints["AzureFTPServerEndPoint"].IPEndpoint;
-            _ftp = new FTPServer(_filesystem, port);
+            _ftp = new FTPServer(port);
             IPEndPoint passivePort = null;
             passivePort = RoleEnvironment.CurrentRoleInstance.InstanceEndpoints["AzureFTPServerPassiveEndPointA"].IPEndpoint;
             _ftp.addPassivePort(passivePort);

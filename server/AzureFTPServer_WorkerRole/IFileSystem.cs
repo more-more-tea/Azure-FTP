@@ -10,7 +10,7 @@ namespace AzureFTPServer_WorkerRole
     public interface IFileSystem
     {
         /* format */
-        void initialize();
+        void initialize(string id);
 
         /* mount file system or intialize the file system. */
         void mount(string path);
@@ -24,6 +24,12 @@ namespace AzureFTPServer_WorkerRole
          */
         void get(string path, Stream stream);
 
+        /*
+         * 
+         * find whether path is exist in the filesystem
+         * return the abs path of the path
+         */
+        string find(string path); 
         /*
          * store file into specified path
          *   if file does not exist, create a new file;

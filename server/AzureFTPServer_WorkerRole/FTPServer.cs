@@ -33,11 +33,11 @@ namespace AzureFTPServer_WorkerRole
          * initialize a FTPServer with a reference to file system and
          * a port number.
          */
-        public FTPServer(IFileSystem filesystem, IPEndPoint port)
+        public FTPServer(IPEndPoint port)
         {
-            this._filesystem = filesystem;
             this._port = port;
             this._passivePorts = new HashSet<IPEndPoint>();
+            this.fsDict = new Dictionary<string, IFileSystem>();
         }
 
         public void addPassivePort(IPEndPoint port)
@@ -88,13 +88,12 @@ namespace AzureFTPServer_WorkerRole
             {
                 /* block accept cooperate with multi-threads */
                 TcpClient client = listener.AcceptTcpClient();
-                FTPServerSlave slave = new FTPServerSlave(this, _accounts, _filesystem, client);
+                FTPServerSlave slave = new FTPServerSlave(this, _accounts, client);
                 Thread thread = new Thread(new ThreadStart(slave.run));
                 thread.Start();
             }
         }
 
-        private IFileSystem _filesystem;
         private Dictionary<string, string> _accounts;
         /*
          * account accepted by the ftp server,
@@ -103,5 +102,6 @@ namespace AzureFTPServer_WorkerRole
         private IPEndPoint _port;
         private HashSet<IPEndPoint> _passivePorts;
         private Semaphore _sem;
+        public Dictionary<string, IFileSystem> fsDict {set ; get;}  
     }
 }

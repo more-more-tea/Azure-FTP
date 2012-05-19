@@ -72,7 +72,11 @@ namespace MvcWebRole1.Models
         public string UserName { get; set; }
 
         [Required]
-        [Display(Name = "Home Directory")]
-        public string HomeDirectory { get; set; }
+        [Display(Name = "Container")]
+        public string Container { get; set; }
+
+        [Required]
+        [Display(Name = "Password")]
+        public string Password { get; set; }
     }
 }

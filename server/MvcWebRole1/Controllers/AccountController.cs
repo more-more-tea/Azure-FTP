@@ -9,7 +9,7 @@ using System.Web.Security;
 using MvcWebRole1.Models;
 using Microsoft.WindowsAzure;
 using Microsoft.WindowsAzure.ServiceRuntime;
-using Microsoft.WindowsAzure.StorageClient;
+
 
 namespace MvcWebRole1.Controllers
 {
@@ -86,40 +86,7 @@ namespace MvcWebRole1.Controllers
 
                 if (createStatus == MembershipCreateStatus.Success)
                 {
-                    Microsoft.WindowsAzure.CloudStorageAccount.
-                   SetConfigurationSettingPublisher(
-                       (configName, configSetter) =>
-                       {
-                           configSetter(RoleEnvironment.
-                               GetConfigurationSettingValue(configName));
-                       }
-                   );
-                    //store user passwd
-                    var storageAccount =
-                        CloudStorageAccount.FromConfigurationSetting(
-                        "DataConnectionString");
-                    var client = storageAccount.CreateCloudBlobClient();
-                    /* get root path, create if not exists */
-                    var container = client.GetContainerReference("user");
-                    container.CreateIfNotExist();
-                    var passwd = container.GetBlobReference("user/passwd/" + model.UserName);
-                    var dir = container.GetBlobReference("user/dir/" + model.UserName);
-                    passwd.UploadText(model.Password);
-                    dir.UploadText(model.UserName);
-
-                    //setup user dir
-                    var storageAccount1 =
-                       CloudStorageAccount.FromConfigurationSetting(
-                       "DataConnectionString");
-                    var client1 = storageAccount1.CreateCloudBlobClient();
-                    /* get root path, create if not exists */
-                    var container1 = client1.GetContainerReference("ftp-root");
-                    container1.CreateIfNotExist();
-                    var dir1 = container1.GetBlobReference(model.UserName+"/");
-                    dir1.Properties.ContentType = "application/octet-stream";
-                    Stream a = new MemoryStream();
-                    dir1.UploadFromStream(a);
-                    a.Close();
+                   
 
                     FormsAuthentication.SetAuthCookie(model.UserName, false /* createPersistentCookie */);
                     return RedirectToAction("Index", "Home");

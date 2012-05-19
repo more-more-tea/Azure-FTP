@@ -5,6 +5,9 @@ using System.Web;
 using System.Web.Mvc;
 using System.Web.Security;
 using MvcWebRole1.Models;
+using Microsoft.WindowsAzure;
+using Microsoft.WindowsAzure.ServiceRuntime;
+using Microsoft.WindowsAzure.StorageClient;
 
 namespace MvcWebRole1.Controllers
 {
@@ -17,13 +20,40 @@ namespace MvcWebRole1.Controllers
         [HttpPost]
         public ActionResult Setup(FTPModel model) 
         {
-            return View();
+            Microsoft.WindowsAzure.CloudStorageAccount.
+                  SetConfigurationSettingPublisher(
+                      (configName, configSetter) =>
+                      {
+                          configSetter(RoleEnvironment.
+                              GetConfigurationSettingValue(configName));
+                      }
+                  );
+            //store user passwd
+            var storageAccount =
+                CloudStorageAccount.FromConfigurationSetting(
+                "DataConnectionString");
+            var client = storageAccount.CreateCloudBlobClient();
+            /* get root path, create if not exists */
+            var container = client.GetContainerReference("user");
+            container.CreateIfNotExist();
+            var passwd = container.GetBlobReference("user/passwd/" + model.UserName);
+            var user_container = container.GetBlobReference("user/container/" + model.UserName);
+            var home = container.GetBlobReference("user/home/" + model.UserName);
+            passwd.UploadText(model.Password);
+            user_container.UploadText(model.Container);
+            home.UploadText("/");
+            return RedirectToAction("SetupSuccess");
         }
 
         //
         //GET : /FTP/Setup
         public ActionResult Setup()
         {
+            return View();
+        }
+
+        //GET : /FTP/SetupSuccess
+        public ActionResult SetupSuccess() {
             return View();
         }
 
