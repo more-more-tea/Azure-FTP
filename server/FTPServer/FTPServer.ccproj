@@ -45,6 +45,14 @@
       <RoleName>AzureFTPServer_WorkerRole</RoleName>
       <UpdateDiagnosticsConnectionStringOnPublish>False</UpdateDiagnosticsConnectionStringOnPublish>
     </ProjectReference>
+    <ProjectReference Include="..\MvcWebRole1\AzureFTPServer_WebRole.csproj">
+      <Name>AzureFTPServer_WebRole</Name>
+      <Project>{4fe84d64-89a0-43bb-ba00-5958f7ce6fdc}</Project>
+      <Private>True</Private>
+      <RoleType>Web</RoleType>
+      <RoleName>AzureFTPServer_WebRole</RoleName>
+      <UpdateDiagnosticsConnectionStringOnPublish>True</UpdateDiagnosticsConnectionStringOnPublish>
+    </ProjectReference>
   </ItemGroup>
   <!-- Import the target files for this project template -->
   <PropertyGroup>
