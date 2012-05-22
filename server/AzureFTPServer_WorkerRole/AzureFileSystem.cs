@@ -17,28 +17,42 @@ namespace AzureFTPServer_WorkerRole
         public AzureFileSystemNode(AzureFileSystemNode parent,
             string path, NodeType type)
         {
-            this.parent = parent;
-            this.name = path;
+            if (parent == null) // root dir
+                this.parent = this;
+            else
+                this.parent = parent;
+            this.name = path; //absolute path
             this.type = type;
             /* no children inserted yet */
-            this.children = null;
+            if (type == NodeType.DIRECTORY)
+            {
+                this.children = new Dictionary<string, AzureFileSystemNode>();
+                this.children["."] = this;
+                this.children[".."] = this.parent;
+            }
+            else
+                this.children = null;
         }
 
         /* insert a new node into file system give an absolute path */
-        public void insert(string relativePath)
+        public void insert(string relativePath, NodeType type)
         {
-            System.Diagnostics.Trace.TraceInformation("absolute path of file: {0}.", relativePath);
-            bool isDirectory = (relativePath[relativePath.Length - 1] ==
-                AzureFileSystem.AFS_FILE_SEPERATOR);
+            System.Diagnostics.Trace.TraceInformation("absolute path of file: {0}.", relativePath);          
             /* split the path */
-            string[] pathParts = getPathParts(relativePath);
+            if (type == NodeType.DIRECTORY)
+                relativePath = relativePath.Substring(0, relativePath.Length - 1);
+            if (relativePath == "") return;
+
+            string[] pathParts = relativePath.Split('/');
 
             /* acquire lock when updating nodes */
             lock (this)
             {
                 AzureFileSystemNode cursor = this;
-                foreach (string path in pathParts)
+
+                for (int i = 0; i < pathParts.Length; i++)
                 {
+                    string path = pathParts[i];
                     /* initialize when descent node need to be inserted. */
                     if (cursor.children == null)
                     {
@@ -53,9 +67,22 @@ namespace AzureFTPServer_WorkerRole
                     }
                     catch (KeyNotFoundException)
                     {
-                        preceed = cursor.children[path] =
-                            new AzureFileSystemNode(cursor, path,
-                                NodeType.DIRECTORY);
+                        if (i == pathParts.Length - 1)
+                        {
+                            if( type == NodeType.DIRECTORY )
+                                preceed = cursor.children[path] =
+                                    new AzureFileSystemNode(cursor, cursor.name+path+"/",
+                                        type);
+                            else
+                                preceed = cursor.children[path] =
+                                   new AzureFileSystemNode(cursor, cursor.name + path,
+                                       type);
+                        }
+                        else {
+                            preceed = cursor.children[path] =
+                                new AzureFileSystemNode(cursor, path,
+                                    NodeType.DIRECTORY);
+                        }
                         System.Diagnostics.Trace.TraceInformation(
                             "Create Azure File System node {0}.", path);
                     }
@@ -63,22 +90,20 @@ namespace AzureFTPServer_WorkerRole
                 }
 
                 /* cursor now last file system node */
-                if (!isDirectory)
-                {
-                    System.Diagnostics.Trace.TraceInformation("aaaaaaaaaaa {0}", isDirectory);
-                    cursor.type = NodeType.FILE;
-                }
+                System.Diagnostics.Trace.TraceInformation("aaaaaaaaaaa {0}", type);
             }
         }
         
         /* find file system node relative to current path */
         public AzureFileSystemNode find(string relativePath)
         {
-            if (relativePath[0] != '/')
-                relativePath = '/' + relativePath;
-
-            string[] pathParts = getPathParts(relativePath);
+            if (relativePath == "")
+                return this;
+            if (relativePath.EndsWith("/"))
+                relativePath = relativePath.Substring(0, relativePath.Length - 1);
+            string[] pathParts = relativePath.Split('/');
             AzureFileSystemNode cursor = this;
+
             lock (this)
             {
                 try
@@ -116,7 +141,14 @@ namespace AzureFTPServer_WorkerRole
                 {
                     if (node.canBeDeleted(node.type))
                     {
-                        System.Diagnostics.Trace.TraceInformation("{0}", node.parent.children.Remove(node.name));
+                        foreach (string key in node.parent.children.Keys) {
+                            if (node == node.parent.children[key]) {
+                                node.parent.children.Remove(key);
+                                break;
+                            }
+                                 
+                        }
+                        System.Diagnostics.Trace.TraceInformation("remove {0}'s {1}", node.parent.name, relativePath);
                     }
                 }
             }
@@ -124,8 +156,10 @@ namespace AzureFTPServer_WorkerRole
 
         public bool canBeDeleted(NodeType type)
         {
-            return ((this.type == type) &&
-                ((children == null) || (children.Count == 0)));
+            if (type == NodeType.DIRECTORY)
+                return (children.Count == 2);
+            else
+                return true;
         }
 
         private string[] getPathParts(string path)
@@ -160,24 +194,13 @@ namespace AzureFTPServer_WorkerRole
         public AzureFileSystem()
         {
             _initialized = false;
-            _filesystem = null;
             _rootPath = null;
             _rootNode = null;
 
-            /*
-             * format file system if not formated
-             * exactly, let file system get root path
-             * if root does not exists, create it
-             */
-            initialize();
-            /*
-             * build hierachy tree of the file system
-             */
-            mount();
         }
 
         /* format device */
-        public void initialize()
+        public void initialize(string id)
         {
             /* file system already initialized, return ASAP */
             if (_initialized == true)
@@ -203,21 +226,29 @@ namespace AzureFTPServer_WorkerRole
                 var storageAccount =
                     CloudStorageAccount.FromConfigurationSetting(
                     "DataConnectionString");
-                _filesystem = storageAccount.CreateCloudBlobClient();
+                var client = storageAccount.CreateCloudBlobClient();
                 /* get root path, create if not exists */
-                _rootPath = _filesystem.GetContainerReference(AFS_MONT_POINT);
+                var user_container = client.GetContainerReference("user");
+                var blob = user_container.GetBlobReference("user/container/"+id);
+                _rootPath = client.GetContainerReference(blob.DownloadText());
                 _rootPath.CreateIfNotExist();
-
+                Stream root = new MemoryStream();
+                var root_blob = _rootPath.GetBlockBlobReference("/");
+                root_blob.Properties.ContentType = AFS_BINARY_MODE;
+                root_blob.UploadFromStream(root);
+                root.Close();
                 
-                CloudBlockBlob blob = _rootPath.GetBlockBlobReference("a/");
-                blob.Properties.ContentType = "application/octet-stream";
-                Stream a = new MemoryStream();
-                blob.UploadFromStream(a);
-                a.Close();
+    //            CloudBlockBlob blob = _rootPath.GetBlockBlobReference("a/");
+    //           blob.Properties.ContentType = "application/octet-stream";
+    //            Stream a = new MemoryStream();
+    //            blob.UploadFromStream(a);
+    //            a.Close();
                 
                 /* create root node */
-                _rootNode = new AzureFileSystemNode(null, AFS_MONT_POINT,
+                _rootNode = new AzureFileSystemNode(null, AFS_ROOT,
                     NodeType.DIRECTORY);
+                
+               
             }
             catch (WebException e)
             {
@@ -233,7 +264,7 @@ namespace AzureFTPServer_WorkerRole
         }
 
         /* intitialize file system */
-        public void mount()
+        public void mount(string mountrootpath)
         {
             if (blobContainerExists(_rootPath))
             {
@@ -243,8 +274,16 @@ namespace AzureFTPServer_WorkerRole
                 foreach (IListBlobItem item in enumerator)
                 {
                     string relativePath = item.Uri.AbsolutePath.Substring(
-                        basePath.Length);
-                    _rootNode.insert(relativePath);
+                        basePath.Length+1);
+                    if (relativePath.StartsWith(mountrootpath)){
+                        relativePath = relativePath.Substring(AFS_ROOT.Length);
+                        if(relativePath.Length == 0)
+                            continue;
+                        if (relativePath.EndsWith("/"))
+                            _rootNode.insert(relativePath, NodeType.DIRECTORY);
+                        else
+                            _rootNode.insert(relativePath, NodeType.FILE);
+                    }
                 }
             }
         }
@@ -255,7 +294,7 @@ namespace AzureFTPServer_WorkerRole
         public IEnumerable<string> dir(string path)
         {
             System.Diagnostics.Trace.TraceInformation("dir path {0}.", path);
-            AzureFileSystemNode node = _rootNode.find(path);
+            AzureFileSystemNode node = _rootNode.find(path.Substring(AFS_ROOT.Length));
             LinkedList<string> files = new LinkedList<string>();
             if (node != null && node.children != null)
             {
@@ -263,14 +302,14 @@ namespace AzureFTPServer_WorkerRole
                 string groupPerm = "---";
                 string otherPerm = "---";
                 char delimiter = ' ';
-                string owner = path.Split(new char[] {'/'})[1];
-                string group = owner;
-                foreach (AzureFileSystemNode child in node.children.Values){
-                    string filename = path.Substring(AFS_ROOT.Length) + child.name;
+                string owner = "undefined"; 
+                string group = _rootPath.Attributes.Name;
+                foreach (String childpath in node.children.Keys){
+                    string filename = node.name + childpath;
                     System.Diagnostics.Trace.TraceInformation("file name: {0}", filename);
                     long blobSize = 0;
                     char directory = 'd';
-                    if (child.type == NodeType.FILE)
+                    if (node.children[childpath].type == NodeType.FILE)
                     {
                         directory = '-';
                         CloudBlockBlob blob =
@@ -290,7 +329,7 @@ namespace AzureFTPServer_WorkerRole
                     sb.Append(group);
                     sb.Append(String.Format("{0,13}", blobSize));
                     sb.Append(delimiter);
-                    sb.Append(child.name);
+                    sb.Append(childpath);
 
                     files.AddLast(sb.ToString());
                     System.Diagnostics.Trace.TraceInformation("file information {0}.", sb.ToString());
@@ -308,16 +347,23 @@ namespace AzureFTPServer_WorkerRole
             }
         }
 
+        public string find(string path) {
+            AzureFileSystemNode node = _rootNode.find(path.Substring(AFS_ROOT.Length));
+            if (node == null)
+                return null;
+            else
+                return node.name;
+        }
         public void get(string path, Stream stream)
         {
-            AzureFileSystemNode node = _rootNode.find(path);
-            if (node != null)
+            AzureFileSystemNode node = _rootNode.find(path.Substring(AFS_ROOT.Length));
+            if (node != null && node.type == NodeType.FILE )
             {
                 if (stream != null)
                 {
-                    System.Diagnostics.Trace.TraceInformation("node name: {0}.", path.Substring(AFS_ROOT.Length));
+                    System.Diagnostics.Trace.TraceInformation("node name: {0}.", path);
                     CloudBlockBlob blob =
-                        _rootPath.GetBlockBlobReference(path.Substring(AFS_ROOT.Length));
+                        _rootPath.GetBlockBlobReference(node.name);
                     blob.DownloadToStream(stream);
                 }
             }
@@ -332,11 +378,11 @@ namespace AzureFTPServer_WorkerRole
             System.Diagnostics.Trace.TraceInformation("file {0}, base {1}.", path, AFS_ROOT);
             /* blob id is relative to ROOT path */
             string relativePath = path.Substring(AFS_ROOT.Length);
+            _rootNode.insert(relativePath, NodeType.FILE);
+            AzureFileSystemNode node = _rootNode.find(relativePath);
             CloudBlockBlob blob =
-                _rootPath.GetBlockBlobReference(relativePath);
+                _rootPath.GetBlockBlobReference(node.name);
             blob.UploadFromStream(file);
-            _rootNode.insert(path);
-
             return;
         }
 
@@ -357,21 +403,21 @@ namespace AzureFTPServer_WorkerRole
         public bool mkdir(string path)
         {
             Stream dir = new MemoryStream();
-            /* compose a valid directory name */
-            if (path[path.Length - 1] != getFileSeperator())
-                path = path + getFileSeperator();
             /* transform absolute path to relative one */
             string relative = path.Substring(AFS_ROOT.Length);
+            
             AzureFileSystemNode node = _rootNode.find(relative);
             if (node == null)
             {
                 /* prepare migration to multi-threaded environment */
                 lock (_rootPath)
                 {
-                    CloudBlockBlob blob = _rootPath.GetBlockBlobReference(relative);
+                    _rootNode.insert(relative, NodeType.DIRECTORY);
+                    AzureFileSystemNode newnode = _rootNode.find(relative);
+                    CloudBlockBlob blob = _rootPath.GetBlockBlobReference(newnode.name);
                     blob.Properties.ContentType = AFS_BINARY_MODE;
                     blob.UploadFromStream(dir);
-                    _rootNode.insert(path);
+                    
                 }
             }
 
@@ -380,9 +426,6 @@ namespace AzureFTPServer_WorkerRole
 
         public bool rmdir(string path)
         {
-            if (path[path.Length - 1] != this.getFileSeperator())
-                path = path + this.getFileSeperator();
-
             return delete(path, NodeType.DIRECTORY);
         }
 
@@ -422,9 +465,9 @@ namespace AzureFTPServer_WorkerRole
             if (node != null)
             {
                 /* prepare migration to multi-threaded environment */
-                CloudBlockBlob blob = _rootPath.GetBlockBlobReference(relative);
+                CloudBlockBlob blob = _rootPath.GetBlockBlobReference(node.name);
                 blob.DeleteIfExists();
-                _rootNode.delete(path);
+                _rootNode.delete(relative);
             }
 
             return (node != null);
@@ -458,14 +501,12 @@ namespace AzureFTPServer_WorkerRole
             }
         }
 
-        private CloudBlobClient _filesystem;
         private CloudBlobContainer _rootPath;
         private AzureFileSystemNode _rootNode;
         private bool _initialized;
 
         /* constants */
         public const char AFS_FILE_SEPERATOR = '/';
-        private const string AFS_MONT_POINT = "ftp-root";
                                             /* mount point on cloud end */
         private const string AFS_ROOT = "/";          /* root directory */
         /* mime type for uploaded file */
